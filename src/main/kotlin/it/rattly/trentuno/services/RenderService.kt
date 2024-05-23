@@ -1,6 +1,8 @@
-package it.rattly.services
+package it.rattly.trentuno.services
 
-import it.rattly.objects.Card
+import it.rattly.trentuno.games.Card
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.awt.*
 import java.awt.image.BufferedImage
 
@@ -8,15 +10,16 @@ object RenderService {
     private const val LINE_WIDTH = 6
     private const val SPACE_BETWEEN_CARDS = 3
 
-    fun renderSingleCard(card: Card) =
+    suspend fun renderSingleCard(card: Card) = withContext(Dispatchers.IO) {
         card.image().let { img ->
             BufferedImage(
                 img.width + LINE_WIDTH, img.height + LINE_WIDTH,
                 BufferedImage.TYPE_INT_ARGB
             ).also { drawCard(card, makeGraphics(it), img, 0) }
         }
+    }
 
-    fun renderCards(cards: List<Card>): BufferedImage =
+    suspend fun renderCards(cards: List<Card>) = withContext(Dispatchers.IO) {
         cards.map { it.image() }.let { cardImages ->
             BufferedImage(
                 cardImages.sumOf { it.width } + LINE_WIDTH + (SPACE_BETWEEN_CARDS * (cardImages.size + 2)),
@@ -34,6 +37,7 @@ object RenderService {
                 }
             }
         }
+    }
 
     private fun drawCard(card: Card, g: Graphics2D, img: BufferedImage, x: Int) {
         val text = "${card.value}"

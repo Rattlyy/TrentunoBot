@@ -1,4 +1,4 @@
-package it.rattly.objects
+package it.rattly.trentuno.games.impl
 
 import dev.kord.common.entity.ButtonStyle
 import dev.kord.common.entity.Snowflake
@@ -10,34 +10,22 @@ import dev.kord.core.entity.channel.TopGuildMessageChannel
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
 import dev.kord.rest.builder.message.actionRow
 import dev.kord.rest.builder.message.create.AbstractMessageCreateBuilder
-import it.rattly.addImage
-import it.rattly.button
-import it.rattly.mention
-import it.rattly.services.RenderService
+import it.rattly.trentuno.addImage
+import it.rattly.trentuno.button
+import it.rattly.trentuno.games.*
+import it.rattly.trentuno.mention
+import it.rattly.trentuno.services.RenderService
 import kotlinx.coroutines.delay
 import me.jakejmattson.discordkt.util.uuid
-import javax.imageio.ImageIO
 
-val possibleCards = mutableListOf<Card>().apply {
-    CardType.entries.forEach { type ->
-        repeat(10) {
-            add(Card(type, it + 1))
-        }
-    }
-}.toList()
-
-class Game(
-    val channelId: Snowflake,
-    val players: List<Player>,
-    private val deck: MutableList<Card>,
-) {
+class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Card>) : Game(channelId, players, deck) {
     private var centerCard: Card = deck.removeFirst()
     private var waitingAction: WaitingStatus = WaitingStatus.WAITING
     private var pointsMap = pointsMap()
     private var rounds = 0
     private var turn = 0
 
-    suspend fun startGameLoop(kord: Kord) {
+    override suspend fun startGameLoop(kord: Kord) {
         val channel = kord.getChannelOf<TopGuildMessageChannel>(channelId)!!
 
         // Game loop runs until someone knocks or the deck is empty
@@ -150,6 +138,7 @@ class Game(
         }
     }
 
+
     private fun pointsMap() =
         // For each player, calculate the points
         players.map { player ->
@@ -204,41 +193,4 @@ class Game(
             return false
         } else return true
     }
-
-    override fun hashCode() = channelId.hashCode()
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is Game) return false
-
-        if (channelId != other.channelId) return false
-
-        return true
-    }
-}
-
-class Player(
-    val id: Snowflake,
-    val cards: MutableList<Card>,
-) {
-    fun renderDeck() = RenderService.renderCards(cards)
-}
-
-class Card(val type: CardType, val value: Int) {
-    fun points() = if (value > 7) 10 else if (value == 1) 11 else value
-    fun human() = "${this.type} ${this.value}"
-    fun image() =
-        ImageIO.read(javaClass.getResourceAsStream("/carte/${this.value}-${this.type.name.lowercase()}.jpg"))!!
-}
-
-fun Pair<CardType, Int>.toCard() = Card(this.first, this.second)
-
-enum class WaitingStatus {
-    WAITING,
-    NEW_CARD,
-    CONTINUE,
-    BREAK,
-}
-
-enum class CardType {
-    COPPE, DENARI, SPADE, BASTONI
 }

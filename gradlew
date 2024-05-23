@@ -34,8 +34,8 @@
 #         * functions;
 #         * expansions «$var», «${var}», «${var:-default}», «${var+SET}»,
 #           «${var#prefix}», «${var%suffix}», and «$( cmd )»;
-#         * compound commands having a testable exit status, especially «case»;
-#         * various built-in commands including «command», «set», and «ulimit».
+#         * compound it.rattly.trentuno.commands having a testable exit status, especially «case»;
+#         * various built-in it.rattly.trentuno.commands including «command», «set», and «ulimit».
 #
 #   Important for patching:
 #

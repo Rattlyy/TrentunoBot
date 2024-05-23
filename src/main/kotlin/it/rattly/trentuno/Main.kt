@@ -1,4 +1,4 @@
-package it.rattly
+package it.rattly.trentuno
 
 import io.github.cdimascio.dotenv.dotenv
 import me.jakejmattson.discordkt.dsl.bot

@@ -5,18 +5,27 @@ import dev.kord.common.entity.Snowflake
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.behavior.interaction.respondPublic
 import dev.kord.rest.builder.message.actionRow
-import it.rattly.addImage
-import it.rattly.button
-import it.rattly.services.GameService
-import kotlinx.coroutines.delay
+import it.rattly.trentuno.addImage
+import it.rattly.trentuno.button
+import it.rattly.trentuno.games.Game
+import it.rattly.trentuno.services.GameService
+import it.rattly.trentuno.services.gameTypes
+import kotlinx.coroutines.*
+import me.jakejmattson.discordkt.arguments.Error
+import me.jakejmattson.discordkt.arguments.StringArgument
+import me.jakejmattson.discordkt.arguments.Success
+import me.jakejmattson.discordkt.commands.DiscordContext
 import me.jakejmattson.discordkt.commands.subcommand
+import kotlin.reflect.KClass
 
 // Channel - List of Players
 val playerQueueMap = mutableMapOf<Snowflake, MutableList<Snowflake>>()
+val gameScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
 fun game() = subcommand("game") {
     sub("start") {
-        execute {
+        execute(GameArg) {
+            val (gameType) = args
             if (GameService.hasGame(channel.id) || playerQueueMap.containsKey(interaction!!.channel.id)) {
                 interaction!!.respondEphemeral {
                     content = "There is already a game in progress!"
@@ -59,11 +68,13 @@ fun game() = subcommand("game") {
             channel.createMessage("10s left to join the game!")
             delay(10_000)
 
-            val game = GameService.addGame(channel.id, playerQueueMap[channel.id]!!)
+            val game = GameService.addGame(channel.id, playerQueueMap[channel.id]!!, gameType)
             playerQueueMap[channel.id]!!.clear()
             playerQueueMap.remove(channel.id)
 
-            game.startGameLoop(this.discord.kord)
+            gameScope.launch {
+                game.startGameLoop(discord.kord)
+            }
         }
     }
 
@@ -83,4 +94,18 @@ fun game() = subcommand("game") {
             }
         }
     }
+}
+
+open class GameArg : StringArgument<KClass<out Game>> {
+    companion object : GameArg()
+
+    override val description = "Choose one of the games"
+    override val name = "game"
+
+    override fun isOptional() = false
+    override suspend fun generateExamples(context: DiscordContext) = gameTypes.map { it.simpleName!! }
+    override suspend fun transform(input: String, context: DiscordContext) =
+        gameTypes.find { it.simpleName.equals(input, true) }
+            ?.let { Success(it) } ?: Error("Game not found")
+
 }
