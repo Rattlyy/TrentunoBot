@@ -19,6 +19,9 @@ import javax.imageio.ImageIO
 val Snowflake.mention: String
     get() = "<@$this>"
 
+val ULong.mention: String
+    get() = "<@$this>"
+
 fun <T> MutableList<T>.removeRandom(): T = random().also { remove(it) }
 fun AbstractMessageCreateBuilder.addImage(img: BufferedImage) {
     addFile(

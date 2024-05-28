@@ -2,6 +2,7 @@ package it.rattly.trentuno.games
 
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
+import it.rattly.trentuno.services.GameType
 import it.rattly.trentuno.services.RenderService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,11 +10,14 @@ import javax.imageio.ImageIO
 
 // must implement this constructor or else reflection fails
 abstract class Game(
+    val type: GameType,
     val channelId: Snowflake,
     val players: List<Player>,
     internal val deck: MutableList<Card>,
 ) {
-    abstract suspend fun startGameLoop(kord: Kord)
+    // main game loop function, coroutine that is supposed to hang until the game is over,
+    // returns the winner of the game
+    abstract suspend fun startGameLoop(kord: Kord): Snowflake
 
     override fun hashCode() = channelId.hashCode()
     override fun equals(other: Any?): Boolean {

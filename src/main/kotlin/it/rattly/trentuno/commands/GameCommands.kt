@@ -1,4 +1,4 @@
-package it.rattly.commands
+package it.rattly.trentuno.commands
 
 import dev.kord.common.entity.ButtonStyle
 import dev.kord.common.entity.Snowflake
@@ -7,25 +7,22 @@ import dev.kord.core.behavior.interaction.respondPublic
 import dev.kord.rest.builder.message.actionRow
 import it.rattly.trentuno.addImage
 import it.rattly.trentuno.button
-import it.rattly.trentuno.games.Game
 import it.rattly.trentuno.services.GameService
-import it.rattly.trentuno.services.gameTypes
-import kotlinx.coroutines.*
+import it.rattly.trentuno.services.GameType
+import kotlinx.coroutines.delay
 import me.jakejmattson.discordkt.arguments.Error
 import me.jakejmattson.discordkt.arguments.StringArgument
 import me.jakejmattson.discordkt.arguments.Success
 import me.jakejmattson.discordkt.commands.DiscordContext
 import me.jakejmattson.discordkt.commands.subcommand
-import kotlin.reflect.KClass
 
 // Channel - List of Players
 val playerQueueMap = mutableMapOf<Snowflake, MutableList<Snowflake>>()
-val gameScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
 fun game() = subcommand("game") {
     sub("start") {
-        execute(GameArg) {
-            val (gameType) = args
+        execute(GameArg.autocomplete { GameType.entries.map { it.name } }) {
+            val gameType = args.first
             if (GameService.hasGame(channel.id) || playerQueueMap.containsKey(interaction!!.channel.id)) {
                 interaction!!.respondEphemeral {
                     content = "There is already a game in progress!"
@@ -72,9 +69,7 @@ fun game() = subcommand("game") {
             playerQueueMap[channel.id]!!.clear()
             playerQueueMap.remove(channel.id)
 
-            gameScope.launch {
-                game.startGameLoop(discord.kord)
-            }
+            GameService.startGame(discord.kord, game)
         }
     }
 
@@ -96,16 +91,15 @@ fun game() = subcommand("game") {
     }
 }
 
-open class GameArg : StringArgument<KClass<out Game>> {
+open class GameArg : StringArgument<GameType> {
     companion object : GameArg()
 
-    override val description = "Choose one of the games"
+    override val description = "Game to join"
     override val name = "game"
 
     override fun isOptional() = false
-    override suspend fun generateExamples(context: DiscordContext) = gameTypes.map { it.simpleName!! }
     override suspend fun transform(input: String, context: DiscordContext) =
-        gameTypes.find { it.simpleName.equals(input, true) }
+        GameType.entries.find { it.name.equals(input, true) }
             ?.let { Success(it) } ?: Error("Game not found")
 
 }

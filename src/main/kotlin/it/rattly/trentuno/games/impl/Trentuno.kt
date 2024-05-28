@@ -14,18 +14,20 @@ import it.rattly.trentuno.addImage
 import it.rattly.trentuno.button
 import it.rattly.trentuno.games.*
 import it.rattly.trentuno.mention
+import it.rattly.trentuno.services.GameType
 import it.rattly.trentuno.services.RenderService
 import kotlinx.coroutines.delay
 import me.jakejmattson.discordkt.util.uuid
 
-class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Card>) : Game(channelId, players, deck) {
+class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Card>, type: GameType) :
+    Game(type, channelId, players, deck) {
     private var centerCard: Card = deck.removeFirst()
     private var waitingAction: WaitingStatus = WaitingStatus.WAITING
     private var pointsMap = pointsMap()
     private var rounds = 0
     private var turn = 0
 
-    override suspend fun startGameLoop(kord: Kord) {
+    override suspend fun startGameLoop(kord: Kord): Snowflake {
         val channel = kord.getChannelOf<TopGuildMessageChannel>(channelId)!!
 
         // Game loop runs until someone knocks or the deck is empty
@@ -41,9 +43,8 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
             channel.createMessage {
                 content = "${player.id.mention} is playing round $rounds! Current card: "
 
-                addImage(RenderService.renderSingleCard(centerCard))
                 swapRows(player, this)
-
+                addImage(RenderService.renderSingleCard(centerCard))
                 actionRow {
                     // Takes new card from the deck
                     button("New card", style = ButtonStyle.Primary, expiration = 60_000) {
@@ -106,7 +107,7 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
 
                 // Every 10 sec send remaining time alert
                 if (secondsPassed % 10 == 0) {
-                    channel.createMessage("${player.id.mention}, you have ${60 - secondsPassed} seconds left to make a move!")
+                    channel.createMessage("${player.id.mention} you have ${60 - secondsPassed} seconds left to make a move!")
                 }
             }
 
@@ -136,6 +137,8 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
                 "**${winner.key.mention} has won the game with ${winner.value.human()} points!**\n" +
                         pointsMap.map { " - ${it.key.mention} has ${it.value.human()} points." }.joinToString("\n")
         }
+
+        return winner.key
     }
 
 
