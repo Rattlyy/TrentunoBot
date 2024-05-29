@@ -15,7 +15,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import org.ktorm.dsl.eq
 import org.ktorm.entity.add
+import org.ktorm.entity.first
+import org.ktorm.support.postgresql.bulkInsertOrUpdate
+import java.util.concurrent.CancellationException
 import kotlin.reflect.KClass
 
 val gameScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -39,34 +43,39 @@ object GameService {
     }
 
     fun startGame(kord: Kord, game: Game) {
-        val playerDbs = game.players.map { PlayerDB(it.id) }.onEach { database.playerDBs.add(it) }
+        database.bulkInsertOrUpdate(PlayerDBs) {
+            onConflict { doNothing() }
 
-        gameScope.launch {
-            val winner = game.startGameLoop(kord)
+            for (player in game.players) {
+                item { set(it.id, player.id) }
+            }
+        }
+
+        game.job = gameScope.launch {
             val server = kord.getChannelOf<GuildMessageChannel>(game.channelId)!!.guildId
-
+            val winner = game.startGameLoop(kord)
             val gameDb = GameDB(
                 serverId = server,
                 channelId = game.channelId,
                 gameType = game.type,
                 gameWinner = winner
-            )
-
-            database.gameDBs.add(gameDb)
+            ).also { database.gameDBs.add(it) }
 
             for (player in game.players) {
                 database.gamePlayerses.add(
                     GamePlayers(
                         game = gameDb,
-                        player = playerDbs.find { it.id == winner },
+                        player = database.playerDBs.first { it.id eq winner },
                     )
                 )
             }
         }
     }
 
-    fun hasGame(channelId: Snowflake): Boolean {
-        return games.any { it.channelId == channelId }
+    fun endGame(channelId: Snowflake) {
+        val game = games.find { it.channelId == channelId } ?: return
+        game.job.cancel(CancellationException("Game was terminated"))
+        games.remove(game)
     }
 
     private fun makeDeck() = mutableListOf<Card>().apply {
@@ -80,6 +89,7 @@ object GameService {
         shuffle()
     }
 
+    fun hasGame(channelId: Snowflake) = games.any { it.channelId == channelId }
     operator fun get(channelId: Snowflake): Game? {
         return games.find { it.channelId == channelId }
     }

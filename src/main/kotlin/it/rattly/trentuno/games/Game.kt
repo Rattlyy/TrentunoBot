@@ -5,6 +5,7 @@ import dev.kord.core.Kord
 import it.rattly.trentuno.services.GameType
 import it.rattly.trentuno.services.RenderService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 import javax.imageio.ImageIO
 
@@ -15,6 +16,7 @@ abstract class Game(
     val players: List<Player>,
     internal val deck: MutableList<Card>,
 ) {
+    lateinit var job: Job
     // main game loop function, coroutine that is supposed to hang until the game is over,
     // returns the winner of the game
     abstract suspend fun startGameLoop(kord: Kord): Snowflake

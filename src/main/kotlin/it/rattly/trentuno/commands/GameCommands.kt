@@ -1,6 +1,8 @@
 package it.rattly.trentuno.commands
 
 import dev.kord.common.entity.ButtonStyle
+import dev.kord.common.entity.Permission
+import dev.kord.common.entity.Permissions
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.behavior.interaction.respondPublic
@@ -87,6 +89,19 @@ fun game() = subcommand("game") {
                     addImage(it.renderDeck())
                 } ?: run { content = "You are not in the game!" }
             }
+        }
+    }
+
+    sub("end", "End the current game in the channel", requiredPermissions = Permissions(Permission.Administrator)) {
+        execute {
+            if (!GameService.hasGame(channel.id)) {
+                interaction!!.respondEphemeral {
+                    content = "There is no game in progress in this channel!"
+                }
+                return@execute
+            }
+
+            GameService.endGame(channel.id)
         }
     }
 }

@@ -16,15 +16,20 @@ repositories {
 dependencies {
     implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
-    implementation("me.jakejmattson:DiscordKt:0.24.1-SNAPSHOT")
+    implementation("ch.qos.logback:logback-core:1.5.6")
+    implementation("ch.qos.logback:logback-classic:1.5.6")
+    implementation("org.tuxdude.logback.extensions:logback-colorizer:1.0.1")
+    implementation("org.slf4j:jul-to-slf4j:2.1.0-alpha1")
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
+    implementation("me.jakejmattson:DiscordKt:0.24.1-SNAPSHOT") {
+        exclude(module = "slf4j-simple")
+    }
 
     val ktormVersion = "4.0.0"
     implementation("org.flywaydb:flyway-core:10.13.0")
     implementation("org.flywaydb:flyway-database-postgresql:10.13.0")
-    implementation("com.h2database:h2:1.3.148")
-    implementation("org.postgresql:postgresql:42.5.1")
-    implementation("com.zaxxer:HikariCP:4.0.2")
+    implementation("com.impossibl.pgjdbc-ng:pgjdbc-ng:0.8.9")
+    implementation("com.zaxxer:HikariCP:5.1.0")
     implementation("org.ktorm:ktorm-core:$ktormVersion")
     implementation("org.ktorm:ktorm-support-postgresql:$ktormVersion")
     implementation("org.ktorm:ktorm-ksp-annotations:$ktormVersion")

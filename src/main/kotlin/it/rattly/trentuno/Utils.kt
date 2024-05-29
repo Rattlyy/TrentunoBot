@@ -18,6 +18,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
+
 val Snowflake.mention: String
     get() = "<@$this>"
 
