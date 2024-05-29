@@ -1,7 +1,8 @@
 plugins {
-    kotlin("jvm") version "1.9.23"
+    kotlin("jvm") version "2.0.0"
     id("com.google.cloud.tools.jib") version "3.4.2"
     id("co.uzzu.dotenv.gradle") version "4.0.0"
+    id("com.google.devtools.ksp") version "2.0.0-1.0.21"
 }
 
 group = "it.rattly"
@@ -9,21 +10,30 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven("https://oss.sonatype.org/content/repositories/snapshots")
 }
 
 dependencies {
-    implementation("me.jakejmattson:DiscordKt:0.24.0")
-    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
+    implementation(kotlin("stdlib"))
     implementation(kotlin("reflect"))
+    implementation("me.jakejmattson:DiscordKt:0.24.1-SNAPSHOT")
+    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
 
-    val exposedVersion = "0.46.0"
-    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
+    val ktormVersion = "4.0.0"
+    implementation("org.flywaydb:flyway-core:10.13.0")
+    implementation("org.flywaydb:flyway-database-postgresql:10.13.0")
     implementation("com.h2database:h2:1.3.148")
     implementation("org.postgresql:postgresql:42.5.1")
     implementation("com.zaxxer:HikariCP:4.0.2")
+    implementation("org.ktorm:ktorm-core:$ktormVersion")
+    implementation("org.ktorm:ktorm-support-postgresql:$ktormVersion")
+    implementation("org.ktorm:ktorm-ksp-annotations:$ktormVersion")
+    implementation("org.testcontainers:postgresql:1.19.3")
+    ksp("org.ktorm:ktorm-ksp-compiler:$ktormVersion")
+}
+
+ksp {
+    arg("ktorm.dbNamingStrategy", "lower-snake-case")
 }
 
 jib {

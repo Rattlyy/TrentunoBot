@@ -2,9 +2,9 @@ package it.rattly.trentuno.services
 
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.Kord
-import it.rattly.trentuno.db.tables.GameDB
-import it.rattly.trentuno.db.tables.GamePlayer
-import it.rattly.trentuno.db.tables.PlayerDB
+import dev.kord.core.entity.channel.GuildMessageChannel
+import it.rattly.trentuno.db.database
+import it.rattly.trentuno.db.tables.*
 import it.rattly.trentuno.games.Card
 import it.rattly.trentuno.games.CardType
 import it.rattly.trentuno.games.Game
@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.ktorm.entity.add
 import kotlin.reflect.KClass
 
 val gameScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -33,32 +33,34 @@ object GameService {
                     mutableListOf(deck.removeRandom(), deck.removeRandom(), deck.removeRandom())
                 )
             },
-            deck
+            deck,
+            gameType
         ).also { games.add(it) }
     }
 
     fun startGame(kord: Kord, game: Game) {
-        transaction {
-            for (player in game.players) {
-                PlayerDB.new(player.id.value) {}
-            }
-        }
+        val playerDbs = game.players.map { PlayerDB(it.id) }.onEach { database.playerDBs.add(it) }
+
         gameScope.launch {
             val winner = game.startGameLoop(kord)
+            val server = kord.getChannelOf<GuildMessageChannel>(game.channelId)!!.guildId
 
-            transaction {
-                val gameDb = GameDB.new {
-                    channelId = game.channelId.value
-                    gameType = game.type
-                    gameWinner = PlayerDB[winner.value]
-                }
+            val gameDb = GameDB(
+                serverId = server,
+                channelId = game.channelId,
+                gameType = game.type,
+                gameWinner = winner
+            )
 
-                for (player in game.players) {
-                    GamePlayer.new {
-                        this.game = gameDb
-                        this.player = PlayerDB[player.id.value]
-                    }
-                }
+            database.gameDBs.add(gameDb)
+
+            for (player in game.players) {
+                database.gamePlayerses.add(
+                    GamePlayers(
+                        game = gameDb,
+                        player = playerDbs.find { it.id == winner },
+                    )
+                )
             }
         }
     }

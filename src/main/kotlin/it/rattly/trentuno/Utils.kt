@@ -5,10 +5,12 @@ import dev.kord.common.entity.Snowflake
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
 import dev.kord.rest.builder.component.ActionRowBuilder
-import dev.kord.rest.builder.message.create.AbstractMessageCreateBuilder
+import dev.kord.rest.builder.message.MessageBuilder
 import dev.kord.x.emoji.DiscordEmoji
 import io.ktor.client.request.forms.*
 import io.ktor.utils.io.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import me.jakejmattson.discordkt.dsl.listeners
 import me.jakejmattson.discordkt.util.toPartialEmoji
 import me.jakejmattson.discordkt.util.uuid
@@ -23,7 +25,7 @@ val ULong.mention: String
     get() = "<@$this>"
 
 fun <T> MutableList<T>.removeRandom(): T = random().also { remove(it) }
-fun AbstractMessageCreateBuilder.addImage(img: BufferedImage) {
+suspend fun MessageBuilder.addImage(img: BufferedImage) = withContext(Dispatchers.IO) {
     addFile(
         "img.png",
         ChannelProvider {

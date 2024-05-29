@@ -20,8 +20,8 @@ import me.jakejmattson.discordkt.commands.subcommand
 val playerQueueMap = mutableMapOf<Snowflake, MutableList<Snowflake>>()
 
 fun game() = subcommand("game") {
-    sub("start") {
-        execute(GameArg.autocomplete { GameType.entries.map { it.name } }) {
+    sub("start", description = "Start a new game in the current channel") {
+        execute(GameArg.instance) {
             val gameType = args.first
             if (GameService.hasGame(channel.id) || playerQueueMap.containsKey(interaction!!.channel.id)) {
                 interaction!!.respondEphemeral {
@@ -73,7 +73,7 @@ fun game() = subcommand("game") {
         }
     }
 
-    sub("deck") {
+    sub("deck", "Show your deck of cards in the current game playing in the channel") {
         execute {
             if (!GameService.hasGame(channel.id)) {
                 interaction!!.respondEphemeral {
@@ -92,14 +92,17 @@ fun game() = subcommand("game") {
 }
 
 open class GameArg : StringArgument<GameType> {
-    companion object : GameArg()
+    companion object {
+        private val suggestions = GameType.entries.map { it.name }
+        val instance = GameArg() //.autocomplete { suggestions }
+    }
 
     override val description = "Game to join"
     override val name = "game"
 
     override fun isOptional() = false
+    override suspend fun generateExamples(context: DiscordContext) = suggestions
     override suspend fun transform(input: String, context: DiscordContext) =
         GameType.entries.find { it.name.equals(input, true) }
             ?.let { Success(it) } ?: Error("Game not found")
-
 }

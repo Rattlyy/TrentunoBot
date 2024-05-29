@@ -1,34 +1,36 @@
 package it.rattly.trentuno.db.tables
 
+import dev.kord.common.entity.Snowflake
+import it.rattly.trentuno.db.SnowflakeSqlType
+import it.rattly.trentuno.db.database
 import it.rattly.trentuno.services.GameType
-import org.jetbrains.exposed.dao.IntEntity
-import org.jetbrains.exposed.dao.IntEntityClass
-import org.jetbrains.exposed.dao.id.EntityID
-import org.jetbrains.exposed.dao.id.IntIdTable
+import org.ktorm.dsl.eq
+import org.ktorm.entity.Entity
+import org.ktorm.entity.find
+import org.ktorm.ksp.annotation.Column
+import org.ktorm.ksp.annotation.PrimaryKey
+import org.ktorm.ksp.annotation.References
+import org.ktorm.ksp.annotation.Table
 
-class GameDB(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<GameDB>(GameTable)
+@Table("games")
+interface GameDB : Entity<GameDB> {
+    @PrimaryKey
+    var id: Int
+    @Column(sqlType = SnowflakeSqlType::class)
+    var serverId: Snowflake
+    @Column(sqlType = SnowflakeSqlType::class)
+    var channelId: Snowflake
+    var gameType: GameType
+    @Column(sqlType = SnowflakeSqlType::class)
+    var gameWinner: Snowflake
 
-    var channelId by GameTable.channelId
-    var gameType by GameTable.gameType
-    var gameWinner by PlayerDB referencedOn GameTable.winner
-    val players by GamePlayer referrersOn GamePlayerTable.gameId
+    val players get() = database.gamePlayerses.find { it.gameId eq this.id }
 }
 
-object GameTable : IntIdTable() {
-    val channelId = ulong("channel_id")
-    val gameType = enumeration<GameType>("game_type")
-    val winner = reference("winner", PlayerTable)
-}
-
-class GamePlayer(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<GamePlayer>(GamePlayerTable)
-
-    var game by GameDB referencedOn GamePlayerTable.gameId
-    var player by PlayerDB referencedOn GamePlayerTable.playerId
-}
-
-object GamePlayerTable : IntIdTable() {
-    val gameId = reference("game_id", GameTable)
-    val playerId = reference("player_id", PlayerTable)
+@Table("game_players")
+interface GamePlayers : Entity<GamePlayers> {
+    @References @PrimaryKey
+    var game: GameDB
+    @References @PrimaryKey
+    var player: PlayerDB
 }

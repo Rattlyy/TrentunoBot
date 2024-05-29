@@ -6,6 +6,7 @@ import dev.kord.core.Kord
 import dev.kord.core.behavior.channel.createMessage
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.behavior.interaction.respondPublic
+import dev.kord.core.behavior.interaction.response.respond
 import dev.kord.core.entity.channel.TopGuildMessageChannel
 import dev.kord.core.event.interaction.ButtonInteractionCreateEvent
 import dev.kord.rest.builder.message.actionRow
@@ -76,7 +77,7 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
                     button("Deck", style = ButtonStyle.Primary, expiration = 60_000) {
                         if (!turnCheck(player)) return@button
 
-                        interaction.respondEphemeral {
+                        interaction.deferEphemeralResponse().respond {
                             content = "Current points: ${pointsMap[player.id]?.human()}"
 
                             addImage(player.renderDeck())
