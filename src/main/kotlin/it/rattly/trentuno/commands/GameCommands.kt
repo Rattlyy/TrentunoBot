@@ -24,7 +24,7 @@ val playerQueueMap = mutableMapOf<Snowflake, MutableList<Snowflake>>()
 fun game() = subcommand("game") {
     sub("start", description = "Start a new game in the current channel") {
         execute(GameArg.instance) {
-            val gameType = args.first
+            val (gameType) = args
             if (GameService.hasGame(channel.id) || playerQueueMap.containsKey(interaction!!.channel.id)) {
                 interaction!!.respondEphemeral {
                     content = "There is already a game in progress!"
@@ -81,6 +81,7 @@ fun game() = subcommand("game") {
                 interaction!!.respondEphemeral {
                     content = "There is no game in progress in this channel!"
                 }
+
                 return@execute
             }
 
@@ -109,13 +110,12 @@ fun game() = subcommand("game") {
 open class GameArg : StringArgument<GameType> {
     companion object {
         private val suggestions = GameType.entries.map { it.name }
-        val instance = GameArg() //.autocomplete { suggestions }
+        val instance = GameArg().autocomplete { suggestions.filter { it.contains(input, true) } }
     }
 
     override val description = "Game to join"
     override val name = "game"
 
-    override fun isOptional() = false
     override suspend fun generateExamples(context: DiscordContext) = suggestions
     override suspend fun transform(input: String, context: DiscordContext) =
         GameType.entries.find { it.name.equals(input, true) }
