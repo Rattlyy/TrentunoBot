@@ -23,24 +23,32 @@ import java.util.concurrent.CancellationException
 import kotlin.reflect.KClass
 
 val gameScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+val basicDeck = mutableListOf<Card>().also { list ->
+    CardType.entries.forEach() { type ->
+        repeat(10) {
+            list.add(Card(type, it + 1))
+        }
+    }
+}
 
 object GameService {
     private val games = hashSetOf<Game>()
 
     // Get a random deck of cards then build the game by giving each player a random card
-    fun addGame(channelId: Snowflake, players: List<Snowflake>, gameType: GameType) = makeDeck().let { deck ->
-        gameType.klass.constructors.first().call( // do not alter order of parameters
-            channelId,
-            players.map { playerId ->
-                Player(
-                    playerId,
-                    mutableListOf(deck.removeRandom(), deck.removeRandom(), deck.removeRandom())
-                )
-            },
-            deck,
-            gameType
-        ).also { games.add(it) }
-    }
+    fun addGame(channelId: Snowflake, players: List<Snowflake>, gameType: GameType) =
+        basicDeck.shuffled().toMutableList().let { deck ->
+            gameType.klass.constructors.first().call( // do not alter order of parameters
+                channelId,
+                players.map { playerId ->
+                    Player(
+                        playerId,
+                        mutableListOf(deck.removeRandom(), deck.removeRandom(), deck.removeRandom())
+                    )
+                },
+                deck,
+                gameType
+            ).also { games.add(it) }
+        }
 
     fun startGame(kord: Kord, game: Game) {
         database.bulkInsertOrUpdate(PlayerDBs) {
@@ -69,6 +77,8 @@ object GameService {
                     )
                 )
             }
+        }.also {
+            it.invokeOnCompletion { games.remove(game) }
         }
     }
 
@@ -76,17 +86,6 @@ object GameService {
         val game = games.find { it.channelId == channelId } ?: return
         game.job.cancel(CancellationException("Game was terminated"))
         games.remove(game)
-    }
-
-    private fun makeDeck() = mutableListOf<Card>().apply {
-        CardType.entries.forEach { type ->
-            repeat(10) {
-                add(Card(type, it + 1))
-            }
-        }
-
-        shuffle()
-        shuffle()
     }
 
     fun hasGame(channelId: Snowflake) = games.any { it.channelId == channelId }

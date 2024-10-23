@@ -22,12 +22,12 @@ import me.jakejmattson.discordkt.commands.subcommand
 val playerQueueMap = mutableMapOf<Snowflake, MutableList<Snowflake>>()
 
 fun game() = subcommand("game") {
-    sub("start", description = "Start a new game in the current channel") {
+    sub("start", description = "Avvia una partita") {
         execute(GameArg.instance) {
             val (gameType) = args
             if (GameService.hasGame(channel.id) || playerQueueMap.containsKey(interaction!!.channel.id)) {
                 interaction!!.respondEphemeral {
-                    content = "There is already a game in progress!"
+                    content = "C'è già una partita in questo canale!"
                 }
 
                 return@execute
@@ -36,35 +36,35 @@ fun game() = subcommand("game") {
             playerQueueMap[channel.id] = mutableListOf(author.id)
 
             interaction!!.respondPublic {
-                content = "Game started! You have 30 seconds to join the game!"
+                content = "Partita avviata! Avete **30 secondi** per entrare nel match!"
 
                 actionRow {
                     button("Join", style = ButtonStyle.Success, expiration = 30_000) {
                         if (playerQueueMap[channel.id]?.contains(interaction.user.id) == true) {
-                            interaction.respondEphemeral { content = "You are already in the game!" }
+                            interaction.respondEphemeral { content = "Sei già in partita!" }
                             return@button
                         }
 
                         playerQueueMap[channel.id]?.add(interaction.user.id)
-                        interaction.respondPublic { content = "${interaction.user.mention} has joined the game!" }
+                        interaction.respondPublic { content = "${interaction.user.mention} è entrato nella partita!" }
                     }
 
                     button("Leave", style = ButtonStyle.Danger, expiration = 30_000) {
                         if (playerQueueMap[channel.id]?.contains(interaction.user.id) == false) {
-                            interaction.respondEphemeral { content = "You are not in the game!" }
+                            interaction.respondEphemeral { content = "Non sei nella partita!" }
                             return@button
                         }
 
                         playerQueueMap[channel.id]?.remove(interaction.user.id)
-                        interaction.respondPublic { content = "${interaction.user.mention} has left the game!" }
+                        interaction.respondPublic { content = "${interaction.user.mention} è uscito dalla partita!" }
                     }
                 }
             }
 
             delay(10_000)
-            channel.createMessage("20s left to join the game!")
+            channel.createMessage("20s rimasti per entrare in partita!")
             delay(10_000)
-            channel.createMessage("10s left to join the game!")
+            channel.createMessage("10s per entrare in partita!")
             delay(10_000)
 
             val game = GameService.addGame(channel.id, playerQueueMap[channel.id]!!, gameType)
@@ -75,11 +75,11 @@ fun game() = subcommand("game") {
         }
     }
 
-    sub("deck", "Show your deck of cards in the current game playing in the channel") {
+    sub("deck", "Mostra le carte che hai in mano (solo a te)") {
         execute {
             if (!GameService.hasGame(channel.id)) {
                 interaction!!.respondEphemeral {
-                    content = "There is no game in progress in this channel!"
+                    content = "Non c'è nessuna partita in corso nel canale in cui hai eseguito il comando!"
                 }
 
                 return@execute
@@ -88,16 +88,16 @@ fun game() = subcommand("game") {
             interaction!!.respondEphemeral {
                 GameService[channel.id]!!.players.find { it.id == interaction!!.user.id }?.let {
                     addImage(it.renderDeck())
-                } ?: run { content = "You are not in the game!" }
+                } ?: run { content = "Non sei in partita!" }
             }
         }
     }
 
-    sub("end", "End the current game in the channel", requiredPermissions = Permissions(Permission.Administrator)) {
+    sub("end", "Termina la partita nel canale corrente", requiredPermissions = Permissions(Permission.Administrator)) {
         execute {
             if (!GameService.hasGame(channel.id)) {
                 interaction!!.respondEphemeral {
-                    content = "There is no game in progress in this channel!"
+                    content = "Non c'è nessuna partita in questo canale!"
                 }
                 return@execute
             }
@@ -113,11 +113,11 @@ open class GameArg : StringArgument<GameType> {
         val instance = GameArg().autocomplete { suggestions.filter { it.contains(input, true) } }
     }
 
-    override val description = "Game to join"
+    override val description = "Game"
     override val name = "game"
 
     override suspend fun generateExamples(context: DiscordContext) = suggestions
     override suspend fun transform(input: String, context: DiscordContext) =
         GameType.entries.find { it.name.equals(input, true) }
-            ?.let { Success(it) } ?: Error("Game not found")
+            ?.let { Success(it) } ?: Error("Game non trovato")
 }

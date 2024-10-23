@@ -55,6 +55,7 @@ enum class WaitingStatus {
     NEW_CARD,
     CONTINUE,
     BREAK,
+    BREAK_LAST_TURN,
 }
 
 enum class CardType {

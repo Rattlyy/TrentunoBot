@@ -14,7 +14,7 @@ import org.ktorm.entity.groupBy
 import org.ktorm.entity.removeIf
 
 fun userCommands() = subcommand("user") {
-    sub("top", description = "Show the top players of the current game") {
+    sub("top", description = "Mostra la classifica di questo server") {
         execute(GameArg.instance) {
             val topPlayers = database.gameDBs
                 .filter { (it.gameType eq args.first) and (it.serverId eq guild.id) }
@@ -27,7 +27,7 @@ fun userCommands() = subcommand("user") {
                     page {
                         title = "TOP PLAYERS"
                         description =
-                            chunk.joinToString("\n") { (name, place) -> "- ${name.mention} • **$place** wins" }
+                            chunk.joinToString("\n") { (name, place) -> "- ${name.mention} • **$place** vittorie" }
                     }
                 }
             }
@@ -36,14 +36,14 @@ fun userCommands() = subcommand("user") {
 
     sub(
         name = "reset",
-        description = "Reset an user's wins in this server",
+        description = "Resetta le vittorie di un player",
         requiredPermissions = Permissions(Permission.Administrator)
     ) {
         execute(UserArg) {
             val wins = database.gameDBs.removeIf { (it.gameWinner eq args.first.id) and (it.serverId eq guild.id) }
 
             respond {
-                description = "Deleted **$wins** wins from ${args.first.mention}!"
+                description = "Rimosse **$wins** vittorie da ${args.first.mention}!"
             }
         }
     }

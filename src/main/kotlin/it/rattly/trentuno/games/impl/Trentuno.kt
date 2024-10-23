@@ -27,6 +27,8 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
     private var pointsMap = pointsMap()
     private var rounds = 0
     private var turn = 0
+    private lateinit var player: Player
+    private var bussaPlayer: Player? = null
 
     override suspend fun startGameLoop(kord: Kord): Snowflake {
         val channel = kord.getChannelOf<TopGuildMessageChannel>(channelId)!!
@@ -35,64 +37,68 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
         while (deck.isNotEmpty()) {
             rounds += 1
             turn += 1 // Started the turn, take new player or fall back to first player
-            val player = players.getOrElse(turn) {
+            player = players.getOrElse(turn) {
                 turn = 0
                 players[turn]
             }
 
+            // If bussato exit out the game loop
+            if (bussaPlayer == player) { break }
+
             // Start turn with current card on the board & display the current player
             channel.createMessage {
-                content = "${player.id.mention} is playing round $rounds! Current card: "
+                content = "Turno di ${player.id.mention} ($rounds)! Carta a terra: "
 
                 swapRows(player, this)
                 addImage(RenderService.renderSingleCard(centerCard))
                 actionRow {
                     // Takes new card from the deck
-                    button("New card", style = ButtonStyle.Primary, expiration = 60_000) {
-                        if (!turnCheck(player)) return@button
+                    button("Pesca", style = ButtonStyle.Primary, expiration = 60_000) {
+                        if (!turnCheck()) return@button
 
                         waitingAction = WaitingStatus.NEW_CARD
                         // Ask the player to choose a move with the new card
                         interaction.respondEphemeral {
-                            content = "You chose to take a new card!"
+                            content = "Hai scelto di pescare!"
                             centerCard = deck.removeFirst()
 
                             addImage(RenderService.renderSingleCard(centerCard))
                             swapRows(player, this)
                             actionRow {
-                                button("Drop new card", style = ButtonStyle.Primary, expiration = 60_000) btn2@{
-                                    if (!turnCheck(player)) return@btn2
+                                button("Butta", style = ButtonStyle.Primary, expiration = 60_000) btn2@{
+                                    if (!turnCheck()) return@btn2
 
                                     waitingAction = WaitingStatus.CONTINUE
                                     interaction.respondPublic {
-                                        content = "${player.id.mention} dropped the new card!"
+                                        content = "${player.id.mention} ha buttato la carta appena pescata!"
                                     }
                                 }
                             }
                         }
 
-                        channel.createMessage("${player.id.mention} took a new card!")
+                        channel.createMessage("${player.id.mention} ha pescato una nuova carta!")
                     }
 
                     button("Deck", style = ButtonStyle.Primary, expiration = 60_000) {
-                        if (!turnCheck(player)) return@button
+                        if (!turnCheck()) return@button
 
                         interaction.deferEphemeralResponse().respond {
-                            content = "Current points: ${pointsMap[player.id]?.human()}"
+                            content = "Punti: ${pointsMap[player.id]?.human()}"
 
                             addImage(player.renderDeck())
                         }
                     }
 
                     if (rounds > 2) {
-                        button("Knock", style = ButtonStyle.Danger, expiration = 60_000) {
-                            if (!turnCheck(player)) return@button
-                            waitingAction = WaitingStatus.BREAK
-                            channel.createMessage("${player.id.mention} knocked! Show your cards!")
+                        button("Bussa", style = ButtonStyle.Danger, expiration = 60_000) {
+                            if (!turnCheck()) return@button
+                            channel.createMessage("Toc toc... ${player.id.mention} ha bussato... Ultimo turno!")
+                            bussaPlayer = player
+                            waitingAction = WaitingStatus.CONTINUE
                         }
                     } else {
                         interactionButton(ButtonStyle.Danger, uuid()) {
-                            label = "Knock"
+                            label = "Bussa"
                             disabled = true
                         }
                     }
@@ -102,20 +108,20 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
             waitingAction = WaitingStatus.WAITING
             var secondsPassed = 0
             // Waiting action: while the player is choosing the action in the background we wait for 60s or skip the turn
-            while ((waitingAction == WaitingStatus.WAITING || waitingAction == WaitingStatus.NEW_CARD) && (secondsPassed < 30)) {
+            while ((waitingAction == WaitingStatus.WAITING || waitingAction == WaitingStatus.NEW_CARD) && (secondsPassed < 60)) {
                 delay(1000)
                 secondsPassed += 1
 
                 // Every 10 sec send remaining time alert
                 if (secondsPassed % 10 == 0) {
-                    channel.createMessage("${player.id.mention} you have ${60 - secondsPassed} seconds left to make a move!")
+                    channel.createMessage("${player.id.mention} hai ${60 - secondsPassed} secondi per fare la tua mossa!")
                 }
             }
 
             // if time is up either pick a card or/and skip the turn
             if (waitingAction == WaitingStatus.NEW_CARD || waitingAction == WaitingStatus.WAITING) {
                 if (waitingAction == WaitingStatus.WAITING) centerCard = deck.removeFirst()
-                channel.createMessage("Time's up ${player.id.mention}! Skipping to the next player!")
+                channel.createMessage("Il tempo è finito ${player.id.mention}! Passo al prossimo giocatore!")
             }
 
             // Refresh the points map
@@ -128,15 +134,15 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
         val winner = pointsMap.maxByOrNull { it.value.value }!! // Get the player with the most points
         for (player in players) {
             channel.createMessage {
-                content = "${player.id.mention}'s cards (${pointsMap[player.id]?.human()})"
+                content = "Carte di ${player.id.mention} (${pointsMap[player.id]?.human()})"
                 addImage(player.renderDeck())
             }
         }
 
         channel.createMessage {
             content =
-                "**${winner.key.mention} has won the game with ${winner.value.human()} points!**\n" +
-                        pointsMap.map { " - ${it.key.mention} has ${it.value.human()} points." }.joinToString("\n")
+                "**${winner.key.mention} ha vinto la partita con ${winner.value.human()} punti!**\n" +
+                        pointsMap.map { " - ${it.key.mention} ha ${it.value.human()} punti." }.joinToString("\n")
         }
 
         return winner.key
@@ -161,39 +167,23 @@ class Trentuno(channelId: Snowflake, players: List<Player>, deck: MutableList<Ca
     // Adds the actionRow with the buttons for the swap card actions
     private fun swapRows(player: Player, builder: AbstractMessageCreateBuilder) {
         builder.actionRow {
-            button("Swap with card 1", style = ButtonStyle.Primary, expiration = 60_000) {
-                waitingAction = WaitingStatus.CONTINUE
-                val card = player.cards[0]
-                player.cards[0] = centerCard
-                centerCard = card
+            repeat(3) {
+                button("Scambia con la ${it + 1} carta", style = ButtonStyle.Primary, expiration = 60_000) {
+                    waitingAction = WaitingStatus.CONTINUE
+                    val card = player.cards[it]
+                    player.cards[it] = centerCard
+                    centerCard = card
 
-                interaction.respondPublic { content = "${player.id.mention} is swapping with card 1!" }
-            }
-
-            button("Swap with card 2", style = ButtonStyle.Primary, expiration = 60_000) {
-                waitingAction = WaitingStatus.CONTINUE
-                val card = player.cards[1]
-                player.cards[1] = centerCard
-                centerCard = card
-
-                interaction.respondPublic { content = "${player.id.mention} is swapping with card 2!" }
-            }
-
-            button("Swap with card 3", style = ButtonStyle.Primary, expiration = 60_000) {
-                waitingAction = WaitingStatus.CONTINUE
-                val card = player.cards[2]
-                player.cards[2] = centerCard
-                centerCard = card
-
-                interaction.respondPublic { content = "${player.id.mention} is swapping with card 3!" }
+                    interaction.respondPublic { content = "${player.id.mention} sta scambiando la carta dal mazzo con la carta ${it + 1}!" }
+                }
             }
         }
     }
 
     // Checks if the clicker is the player who is currently playing the turn
-    private suspend fun ButtonInteractionCreateEvent.turnCheck(player: Player): Boolean {
-        if (player.id != interaction.user.id) {
-            interaction.respondEphemeral { content = "It's not your turn!" }
+    private suspend fun ButtonInteractionCreateEvent.turnCheck(): Boolean {
+        if (player.id != this.interaction.user.id) {
+            interaction.respondEphemeral { content = "Non è il tuo turno!" }
             return false
         } else return true
     }

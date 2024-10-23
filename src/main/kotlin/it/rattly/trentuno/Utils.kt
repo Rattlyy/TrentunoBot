@@ -22,9 +22,6 @@ import javax.imageio.ImageIO
 val Snowflake.mention: String
     get() = "<@$this>"
 
-val ULong.mention: String
-    get() = "<@$this>"
-
 fun <T> MutableList<T>.removeRandom(): T = random().also { remove(it) }
 suspend fun MessageBuilder.addImage(img: BufferedImage) = withContext(Dispatchers.IO) {
     addFile(
@@ -59,7 +56,7 @@ fun ActionRowBuilder.button(
     actions[uuid] = {
         if (System.currentTimeMillis() > expire) {
             actions.remove(uuid)
-            interaction.respondEphemeral { content = "This button has expired!" }
+            interaction.respondEphemeral { content = "Questo pulsante è scaduto!" }
         } else action()
     }
 }
@@ -67,7 +64,7 @@ fun ActionRowBuilder.button(
 fun miscListeners() = listeners {
     on<ButtonInteractionCreateEvent> {
         actions[interaction.component.customId]?.invoke(this) ?: interaction.respondEphemeral {
-            content = "This button has expired!"
+            content = "Questo pulsante è scaduto!"
         }
     }
 }
