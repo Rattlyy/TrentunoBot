@@ -4,6 +4,7 @@ import dev.kord.common.entity.ButtonStyle
 import dev.kord.common.entity.Permission
 import dev.kord.common.entity.Permissions
 import dev.kord.common.entity.Snowflake
+import dev.kord.core.behavior.channel.asChannelOf
 import dev.kord.core.behavior.interaction.respondEphemeral
 import dev.kord.core.behavior.interaction.respondPublic
 import dev.kord.rest.builder.message.actionRow
@@ -45,6 +46,11 @@ fun game() = subcommand("game") {
                             return@button
                         }
 
+                        if (playerQueueMap.size == 2 && gameType == GameType.SETTE_E_MEZZO) {
+                            interaction.respondEphemeral { content = "Questa partita è piena!" }
+                            return@button
+                        }
+
                         playerQueueMap[channel.id]?.add(interaction.user.id)
                         interaction.respondPublic { content = "${interaction.user.mention} è entrato nella partita!" }
                     }
@@ -67,7 +73,7 @@ fun game() = subcommand("game") {
             channel.createMessage("10s per entrare in partita!")
             delay(10_000)
 
-            val game = GameService.addGame(channel.id, playerQueueMap[channel.id]!!, gameType)
+            val game = GameService.addGame(channel.asChannelOf(), playerQueueMap[channel.id]!!, gameType)
             playerQueueMap[channel.id]!!.clear()
             playerQueueMap.remove(channel.id)
 

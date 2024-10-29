@@ -20,23 +20,39 @@ object RenderService {
     }
 
     suspend fun renderCards(cards: List<Card>) = withContext(Dispatchers.IO) {
-        cards.map { it.image() }.let { cardImages ->
-            BufferedImage(
-                cardImages.sumOf { it.width } + LINE_WIDTH + (SPACE_BETWEEN_CARDS * (cardImages.size + 2)),
-                cardImages.minOf { it.height } + LINE_WIDTH,
-                BufferedImage.TYPE_INT_ARGB
-            ).also { buff ->
-                makeGraphics(buff).also { g ->
-                    cards.forEachIndexed { index, card ->
-                        drawCard(
-                            card,
-                            g,
-                            cardImages[index],
-                            cardImages.take(index).sumOf { it.width + LINE_WIDTH + SPACE_BETWEEN_CARDS })
+        if (cards.size == 1) return@withContext renderSingleCard(cards.first())
+        val drawnImages = cards.associateBy { it.image() }.let { allCardImages ->
+            allCardImages.toList().chunked(3).map { cardImages ->
+                BufferedImage(
+                    cardImages.sumOf { it.first.width } + LINE_WIDTH + (SPACE_BETWEEN_CARDS * (cardImages.size + 2)),
+                    cardImages.minOf { it.first.height } + LINE_WIDTH,
+                    BufferedImage.TYPE_INT_ARGB
+                ).also { buff ->
+                    makeGraphics(buff).also { g ->
+                        cardImages.forEachIndexed { index, (img, card) ->
+                            drawCard(
+                                card,
+                                g,
+                                img,
+                                cardImages.take(index).sumOf { it.first.width + LINE_WIDTH + SPACE_BETWEEN_CARDS })
+                        }
                     }
                 }
             }
         }
+
+        return@withContext if (drawnImages.size == 1) drawnImages.first() else
+            BufferedImage(
+                drawnImages.first().width,
+                drawnImages.sumOf { it.height },
+                BufferedImage.TYPE_INT_ARGB
+            ).also { buff ->
+                makeGraphics(buff).also { g ->
+                    drawnImages.forEachIndexed { index, card ->
+                        g.drawImage(card, 0, index * card.height, null)
+                    }
+                }
+            }
     }
 
     private fun drawCard(card: Card, g: Graphics2D, img: BufferedImage, x: Int) {

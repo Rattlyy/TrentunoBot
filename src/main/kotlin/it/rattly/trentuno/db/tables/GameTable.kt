@@ -22,7 +22,7 @@ interface GameDB : Entity<GameDB> {
     var channelId: Snowflake
     var gameType: GameType
     @Column(sqlType = SnowflakeSqlType::class)
-    var gameWinner: Snowflake
+    var gameWinner: Snowflake?
 
     val players get() = database.gamePlayerses.find { it.gameId eq this.id }
 }

@@ -9,8 +9,9 @@ import me.jakejmattson.discordkt.arguments.UserArg
 import me.jakejmattson.discordkt.commands.subcommand
 import org.ktorm.dsl.and
 import org.ktorm.dsl.eq
+import org.ktorm.entity.eachCount
 import org.ktorm.entity.filter
-import org.ktorm.entity.groupBy
+import org.ktorm.entity.groupingBy
 import org.ktorm.entity.removeIf
 
 fun userCommands() = subcommand("user") {
@@ -18,16 +19,21 @@ fun userCommands() = subcommand("user") {
         execute(GameArg.instance) {
             val topPlayers = database.gameDBs
                 .filter { (it.gameType eq args.first) and (it.serverId eq guild.id) }
-                .groupBy { it.gameWinner }
-                .map { it.key to it.value.count() }
+                .groupingBy { it.gameWinner }
+                .eachCount().toList()
                 .sortedByDescending { it.second }
 
             respondMenu {
-                for (chunk in topPlayers.chunked(10)) {
+                if (topPlayers.isEmpty()) {
+                    page {
+                        title = "TOP PLAYERS"
+                        description = "There is no one in the top!"
+                    }
+                } else for (chunk in topPlayers.chunked(10)) {
                     page {
                         title = "TOP PLAYERS"
                         description =
-                            chunk.joinToString("\n") { (name, place) -> "- ${name.mention} • **$place** vittorie" }
+                            chunk.joinToString("\n") { (name, place) -> "- ${name?.mention} • **$place** vittorie" }
                     }
                 }
             }

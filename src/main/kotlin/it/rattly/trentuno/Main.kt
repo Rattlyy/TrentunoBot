@@ -9,11 +9,10 @@ import org.slf4j.bridge.SLF4JBridgeHandler
 val install = SLF4JBridgeHandler.install()
 val dotenv = dotenv { ignoreIfMissing = true }
 
-fun main() = bot(dotenv["TOKEN"] ?: error("Token not set")) {
+fun main() = bot( dotenv["TOKEN"] ?: error("Token not set")) {
     presence {
         playing("trentuno [v3.0]")
     }
 }
-
-//TODO: @autore comando / game start viene annunciato che e nel match
+//TODO: forcestart
 //TODO: i18n
